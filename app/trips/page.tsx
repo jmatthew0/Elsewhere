@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTrips } from "@/lib/queries";
 import { money } from "@/lib/currency";
 
+
 export const dynamic = "force-dynamic";
 
 const range = (a: Date, b: Date) =>
@@ -12,9 +13,12 @@ export default async function TripsPage() {
   const trips = await getTrips();
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-display text-4xl">My trips</h1>
-        <p className="mt-1 text-navy-600">{trips.length} trips planned.</p>
+            <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-4xl">My trips</h1>
+          <p className="mt-1 text-navy-600">{trips.length} trips planned.</p>
+        </div>
+        <Link href="/trips/new" className="rounded-full bg-navy px-5 py-2 text-sm font-medium text-sand hover:bg-navy-800">New trip</Link>
       </header>
       <div className="grid gap-6 md:grid-cols-2">
         {trips.map((t) => {
