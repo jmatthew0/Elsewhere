@@ -2,7 +2,9 @@ export const field = "w-full rounded-xl border border-sand-400 bg-sand-200 px-3 
 export const label = "grid gap-1 text-sm text-navy-600";
 export const button = "rounded-full bg-navy px-5 py-2 text-sm font-medium text-sand hover:bg-navy-800";
 export const CURRENCIES = ["PHP", "USD", "EUR", "JPY", "GBP", "KRW", "SGD", "AUD", "CAD", "AED"];
+
 export const COUNTRIES = ["Philippines", "Japan", "South Korea", "Singapore", "Thailand", "Vietnam", "Indonesia", "Malaysia", "Hong Kong", "Taiwan", "Italy", "France", "Spain", "Portugal", "Greece", "Germany", "United Kingdom", "Switzerland", "Netherlands", "United States", "Canada", "Australia", "New Zealand", "United Arab Emirates", "Turkey", "Egypt"];
+
 const CODES: Record<string, string> = { Philippines: "PH", Japan: "JP", "South Korea": "KR", Singapore: "SG", Thailand: "TH", Vietnam: "VN", Indonesia: "ID", Malaysia: "MY", "Hong Kong": "HK", Taiwan: "TW", Italy: "IT", France: "FR", Spain: "ES", Portugal: "PT", Greece: "GR", Germany: "DE", "United Kingdom": "GB", Switzerland: "CH", Netherlands: "NL", "United States": "US", Canada: "CA", Australia: "AU", "New Zealand": "NZ", "United Arab Emirates": "AE", Turkey: "TR", Egypt: "EG" };
-export const flag = (c: string) => (CODES[c] ? [...CODES[c]].map((x) => String.fromCodePoint(127397 + x.charCodeAt(0))).join("") : "🌍");
+export const flag = (c: string) => (CODES[c] ? [...CODES[c]].map((x) => String(String.fromCodePoint(127397 + x.charCodeAt(0)))).join("") : "🌍");
 export const initials = (n?: string | null) => (n ?? "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();

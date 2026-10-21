@@ -29,6 +29,7 @@ export const getTrip = (id: string) =>
     include: {
       members: { include: { user: true } },
       places: true,
+      reservations: { orderBy: { date: "asc" } },
       expenses: { include: { splits: true } },
       activities: { include: { place: true, expenses: true }, orderBy: [{ day: "asc" }, { startsAt: "asc" }] },
     },

@@ -12,6 +12,8 @@ import { getRateToPhp, money } from "@/lib/currency";
 import { balances } from "@/lib/balances";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import { deleteActivity } from "@/lib/actions";
+import Reservations from "@/components/Reservations";
+import ReservationForm from "@/components/ReservationForm";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-        <Link href="/" className="text-xs font-semibold tracking-wide text-navy-600 hover:text-navy">← BACK TO DASHBOARD</Link>
+          <Link href="/" className="text-xs font-semibold tracking-wide text-navy-600 hover:text-navy">← BACK TO DASHBOARD</Link>
           <h1 className="mt-1 font-display text-4xl">{trip.title}</h1>
           <p className="text-navy-600">
             {fmt(trip.startDate)} – {fmt(trip.endDate)} · {trip.destination}{trip.country ? `, ${trip.country}` : ""} · {trip.members.length} traveler{trip.members.length === 1 ? "" : "s"}
@@ -114,6 +116,9 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
+          <Reservations items={trip.reservations} cur={cur} rate={rate} />
+          <ReservationForm tripId={trip.id} />
+
           <div className={card}>
             <h2 className="font-display text-xl">Travel group</h2>
             <ul className="mt-3 space-y-3">
@@ -137,8 +142,8 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             </ul>
           </div>
 
-          <div className={card}>
-          className="rounded-3xl bg-navy p-5 text-sand"
+          <div className="rounded-3xl bg-navy p-5 text-sand">
+            <h2 className="font-display text-xl">Route</h2>
             <TripMap pins={pins} route={stops.length > 1} className="mt-3 h-64 overflow-hidden rounded-2xl" />
             <p className="mt-2 text-sm text-sand-400">{stops.length > 1 ? `${stops.length} stops in itinerary order` : "Link stops to places and your route appears here."}</p>
           </div>

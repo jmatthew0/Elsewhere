@@ -9,6 +9,7 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const cents = (f: FormData, k: string) => Math.round(parseFloat(str(f, k) || "0") * 100);
 const MAX_AMOUNT = 10_000_000; // keeps cents inside the database's 32-bit limit
 const over = (f: FormData, k: string) => parseFloat(str(f, k) || "0") > MAX_AMOUNT;
+const refresh = () => revalidatePath("/", "layout");
 
 type TripState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -33,6 +34,8 @@ async function coverFor(choice: string, destination: string, country: string) {
     return null;
   }
 }
+
+/* ---------- Trips ---------- */
 
 export async function createTrip(_prev: TripState, formData: FormData): Promise<TripState> {
   const values: Record<string, string> = {};
@@ -75,9 +78,53 @@ export async function createTrip(_prev: TripState, formData: FormData): Promise<
     return fail("Couldn't save the trip. If you added the country field recently, run `npx prisma db push` and restart the app.");
   }
 
-  revalidatePath("/", "layout");
+  refresh();
   redirect(`/trips/${id}`);
 }
+
+export async function updateTrip(_prev: TripState, formData: FormData): Promise<TripState> {
+  const values: Record<string, string> = {};
+  formData.forEach((v, k) => { values[k] = String(v); });
+  const fail = (error: string) => ({ error, values });
+
+  const id = str(formData, "id");
+  const title = str(formData, "title");
+  const destination = str(formData, "destination");
+  const country = str(formData, "country");
+  const startDate = new Date(str(formData, "startDate"));
+  const endDate = new Date(str(formData, "endDate"));
+  if (!id) return fail("Couldn't tell which trip to edit.");
+  if (!title) return fail("Give your trip a name.");
+  if (!destination) return fail("Add a destination.");
+  if (isNaN(+startDate) || isNaN(+endDate)) return fail("Choose a start and end date.");
+  if (endDate < startDate) return fail("The end date needs to be on or after the start date.");
+  if (over(formData, "budget")) return fail("That budget is too large. Use 10,000,000 or less.");
+
+  try {
+    await db.trip.update({
+      where: { id },
+      data: { title, destination, startDate, endDate, country: country || null, budgetCents: Math.max(0, cents(formData, "budget")) },
+    });
+    const cover = str(formData, "cover");
+    if (cover && cover !== "keep") await db.trip.update({ where: { id }, data: { coverUrl: await coverFor(cover, destination, country) } });
+  } catch (e) {
+    console.error(e);
+    return fail("Couldn't save your changes. Try again.");
+  }
+
+  refresh();
+  redirect(`/trips/${id}`);
+}
+
+export async function deleteTrip(formData: FormData) {
+  const id = str(formData, "id");
+  if (!id) return;
+  await db.trip.delete({ where: { id } });
+  refresh();
+  redirect("/trips");
+}
+
+/* ---------- Stops ---------- */
 
 export async function addActivity(formData: FormData) {
   const tripId = str(formData, "tripId");
@@ -94,8 +141,17 @@ export async function addActivity(formData: FormData) {
       placeId: str(formData, "placeId") || null,
     },
   });
-  revalidatePath(`/trips/${tripId}`);
+  refresh();
 }
+
+export async function deleteActivity(formData: FormData) {
+  const id = str(formData, "id");
+  if (!id) return;
+  await db.activity.delete({ where: { id } });
+  refresh();
+}
+
+/* ---------- Expenses ---------- */
 
 export async function logExpense(formData: FormData) {
   const tripId = str(formData, "tripId");
@@ -103,9 +159,13 @@ export async function logExpense(formData: FormData) {
   const amountCents = cents(formData, "amount");
   const payerId = str(formData, "payerId");
   const splitIds = formData.getAll("splitWith").map(String);
-  if (!tripId || !title || amountCents <= 0 || !payerId || splitIds.length === 0)
-    if (amountCents > MAX_AMOUNT * 100) throw new Error("That amount is too large. Use 10,000,000 or less.");
+
+  if (!tripId || !title || amountCents <= 0 || !payerId || splitIds.length === 0) {
     throw new Error("Add what it was, an amount above zero, who paid, and who shares it.");
+  }
+  if (over(formData, "amount")) {
+    throw new Error("That amount is too large. Use 10,000,000 or less.");
+  }
 
   const members = await db.tripMember.findMany({ where: { tripId } });
   const ok = new Set(members.map((m) => m.userId));
@@ -121,89 +181,70 @@ export async function logExpense(formData: FormData) {
       splits: { create: equalSplit(amountCents, splitIds) },
     },
   });
-  revalidatePath(`/trips/${tripId}`);
-  revalidatePath("/expenses");
-  revalidatePath("/trips");
+  refresh();
 }
 
-export async function savePlace(formData: FormData) {
-    const tripId = str(formData, "tripId");
-    const name = str(formData, "name");
-    const lat = parseFloat(str(formData, "lat"));
-    const lng = parseFloat(str(formData, "lng"));
-    if (!tripId || !name || !Number.isFinite(lat) || !Number.isFinite(lng))
-      throw new Error("Search for a place and pick a result first.");
-  
-    // Mapbox has no photos, so each place gets a map snapshot with a pin.
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    const imageUrl = token
-      ? `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-l+13233f(${lng},${lat})/${lng},${lat},14,0/600x400@2x?access_token=${token}`
-      : null;
-  
-    await db.place.create({ data: { tripId, name, category: str(formData, "category") || "Other", lat, lng, imageUrl } });
-    revalidatePath("/", "layout");
-  }
-  
-  export async function removePlace(formData: FormData) {
-    const id = str(formData, "id");
-    if (!id) return;
-    await db.activity.updateMany({ where: { placeId: id }, data: { placeId: null } });
-    await db.place.delete({ where: { id } });
-    revalidatePath("/", "layout");
-  }
+export async function deleteExpense(formData: FormData) {
+  const id = str(formData, "id");
+  if (!id) return;
+  await db.expense.delete({ where: { id } });
+  refresh();
+}
 
-  export async function updateTrip(_prev: TripState, formData: FormData): Promise<TripState> {
-    const values: Record<string, string> = {};
-    formData.forEach((v, k) => { values[k] = String(v); });
-    const fail = (error: string) => ({ error, values });
-  
-    const id = str(formData, "id");
-    const title = str(formData, "title");
-    const destination = str(formData, "destination");
-    const country = str(formData, "country");
-    const startDate = new Date(str(formData, "startDate"));
-    const endDate = new Date(str(formData, "endDate"));
-    if (!id) return fail("Couldn't tell which trip to edit.");
-    if (!title) return fail("Give your trip a name.");
-    if (!destination) return fail("Add a destination.");
-    if (isNaN(+startDate) || isNaN(+endDate)) return fail("Choose a start and end date.");
-    if (endDate < startDate) return fail("The end date needs to be on or after the start date.");
-    if (over(formData, "budget")) return fail("That budget is too large. Use 10,000,000 or less.");
-  
-    try {
-      await db.trip.update({
-        where: { id },
-        data: { title, destination, startDate, endDate, country: country || null, budgetCents: Math.max(0, cents(formData, "budget")) },
-      });
-      const cover = str(formData, "cover");
-      if (cover && cover !== "keep") await db.trip.update({ where: { id }, data: { coverUrl: await coverFor(cover, destination, country) } });
-    } catch (e) {
-      console.error(e);
-      return fail("Couldn't save your changes. Try again.");
-    }
-  
-    revalidatePath("/", "layout");
-    redirect(`/trips/${id}`);
-  }
-  
-  export async function deleteTrip(formData: FormData) {
-    const id = str(formData, "id");
-    if (!id) return;
-    await db.trip.delete({ where: { id } });
-    revalidatePath("/", "layout");
-    redirect("/trips");
-  }
-  
-  export async function deleteActivity(formData: FormData) {
-    const id = str(formData, "id");
-    if (!id) return;
-    await db.activity.delete({ where: { id } });
-    revalidatePath("/", "layout");
-  }
-  
-  export async function deleteExpense(formData: FormData) {
-    const id = str(formData, "id");
-    if (!id) return;
-    await db.expense.delete({ where: { id } });
-    revalidatePath("/", "layout");
-  }
+/* ---------- Places ---------- */
+
+export async function savePlace(formData: FormData) {
+  const tripId = str(formData, "tripId");
+  const name = str(formData, "name");
+  const lat = parseFloat(str(formData, "lat"));
+  const lng = parseFloat(str(formData, "lng"));
+  if (!tripId || !name || !Number.isFinite(lat) || !Number.isFinite(lng))
+    throw new Error("Search for a place and pick a result first.");
+
+  // Mapbox has no photos, so each place gets a map snapshot with a pin.
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const imageUrl = token
+    ? `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-l+13233f(${lng},${lat})/${lng},${lat},14,0/600x400@2x?access_token=${token}`
+    : null;
+
+  await db.place.create({ data: { tripId, name, category: str(formData, "category") || "Other", lat, lng, imageUrl } });
+  refresh();
+}
+
+export async function removePlace(formData: FormData) {
+  const id = str(formData, "id");
+  if (!id) return;
+  await db.activity.updateMany({ where: { placeId: id }, data: { placeId: null } });
+  await db.place.delete({ where: { id } });
+  refresh();
+}
+
+/* ---------- Reservations ---------- */
+
+export async function addReservation(formData: FormData) {
+  const tripId = str(formData, "tripId");
+  const title = str(formData, "title");
+  if (!tripId || !title) throw new Error("Add a title for the reservation.");
+  if (over(formData, "cost")) throw new Error("That cost is too large. Use 10,000,000 or less.");
+
+  const date = str(formData, "date");
+  await db.reservation.create({
+    data: {
+      tripId, title,
+      kind: str(formData, "kind") || "Other",
+      status: str(formData, "status") || "BOOKED",
+      reference: str(formData, "reference") || null,
+      details: str(formData, "details") || null,
+      date: date ? new Date(date) : null,
+      costCents: Math.max(0, cents(formData, "cost")),
+    },
+  });
+  refresh();
+}
+
+export async function deleteReservation(formData: FormData) {
+  const id = str(formData, "id");
+  if (!id) return;
+  await db.reservation.delete({ where: { id } });
+  refresh();
+}
