@@ -17,7 +17,7 @@ export default function LogExpenseForm({ tripId, cur, members, activities, open 
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className={label}>Amount ({cur})
-            <input type="number" name="amount" min="0.01" step="0.01" required className={field} />
+          <input type="number" name="amount" min="0.01" max="10000000" step="0.01" required className={field} />
           </label>
           <label className={label}>Category
             <select name="category" className={field}>

@@ -20,7 +20,7 @@ export default function AddStopForm({ tripId, days, places }: { tripId: string; 
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className={label}>Estimated cost
-            <input type="number" name="estimate" min="0" step="0.01" placeholder="0" className={field} />
+          <input type="number" name="estimate" min="0" max="10000000" step="0.01" placeholder="0" className={field} />
           </label>
           <label className={label}>Place
             <select name="placeId" className={field}>

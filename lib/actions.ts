@@ -3,34 +3,80 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "./prisma";
 import { equalSplit } from "./balances";
-import { getCurrentUser } from "./queries";
+import { requireUser } from "./queries";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const cents = (f: FormData, k: string) => Math.round(parseFloat(str(f, k) || "0") * 100);
+const MAX_AMOUNT = 10_000_000; // keeps cents inside the database's 32-bit limit
+const over = (f: FormData, k: string) => parseFloat(str(f, k) || "0") > MAX_AMOUNT;
 
-export async function createTrip(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("No signed-in user. Run `npx prisma db seed` first.");
+type TripState = { error?: string; values?: Record<string, string> } | undefined;
+
+const COVERS: Record<string, string> = {
+  tuscany: "photo-1529260830199-42c24126f198",
+  coast: "photo-1570077188670-e3a8d69ac5ff",
+  temples: "photo-1493976040374-85c8e12f0c0e",
+  city: "photo-1552832230-c0197dd311b5",
+};
+
+async function coverFor(choice: string, destination: string, country: string) {
+  if (COVERS[choice]) return `https://images.unsplash.com/${COVERS[choice]}?auto=format&fit=crop&w=900&q=70`;
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+  try {
+    const q = encodeURIComponent([destination, country].filter(Boolean).join(", "));
+    const res = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${q}&limit=1&access_token=${token}`);
+    const [lng, lat] = (await res.json()).features?.[0]?.geometry?.coordinates ?? [];
+    if (typeof lng !== "number") return null;
+    return `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${lng},${lat},8,0/900x600@2x?access_token=${token}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function createTrip(_prev: TripState, formData: FormData): Promise<TripState> {
+  const values: Record<string, string> = {};
+  formData.forEach((v, k) => { values[k] = String(v); });
+  const fail = (error: string) => ({ error, values });
 
   const title = str(formData, "title");
   const destination = str(formData, "destination");
+  const country = str(formData, "country");
   const startDate = new Date(str(formData, "startDate"));
   const endDate = new Date(str(formData, "endDate"));
-  if (!title || !destination || isNaN(+startDate) || isNaN(+endDate) || endDate < startDate)
-    throw new Error("Add a title, a destination, and an end date that is on or after the start date.");
+  if (!title) return fail("Give your trip a name.");
+  if (!destination) return fail("Add a destination.");
+  if (isNaN(+startDate) || isNaN(+endDate)) return fail("Choose a start and end date.");
+  if (endDate < startDate) return fail("The end date needs to be on or after the start date.");
+  if (over(formData, "budget")) return fail("That budget is too large. Use 10,000,000 or less.");
 
-  const trip = await db.trip.create({
-    data: {
-      title, destination, startDate, endDate,
-      country: str(formData, "country") || null,
-      currency: str(formData, "currency") || "PHP",
-      budgetCents: cents(formData, "budget"),
-      members: { create: { userId: user.id, role: "ORGANIZER" } },
-    },
-  });
-  revalidatePath("/");
-  revalidatePath("/trips");
-  redirect(`/trips/${trip.id}`);
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return fail("No user found. Run `npx prisma db seed` once, then try again.");
+  }
+
+  const coverUrl = await coverFor(str(formData, "cover"), destination, country);
+  let id: string;
+  try {
+    const trip = await db.trip.create({
+      data: {
+        title, destination, startDate, endDate, coverUrl,
+        country: country || null,
+        currency: str(formData, "currency") || "PHP",
+        budgetCents: Math.max(0, cents(formData, "budget")),
+        members: { create: { userId: user.id, role: "ORGANIZER" } },
+      },
+    });
+    id = trip.id;
+  } catch (e) {
+    console.error(e);
+    return fail("Couldn't save the trip. If you added the country field recently, run `npx prisma db push` and restart the app.");
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/trips/${id}`);
 }
 
 export async function addActivity(formData: FormData) {
@@ -38,6 +84,7 @@ export async function addActivity(formData: FormData) {
   const title = str(formData, "title");
   const day = parseInt(str(formData, "day"), 10);
   if (!tripId || !title || !(day >= 1)) throw new Error("Add a stop name and a day number of 1 or more.");
+  if (over(formData, "estimate")) throw new Error("That estimate is too large. Use 10,000,000 or less.");
 
   await db.activity.create({
     data: {
@@ -57,6 +104,7 @@ export async function logExpense(formData: FormData) {
   const payerId = str(formData, "payerId");
   const splitIds = formData.getAll("splitWith").map(String);
   if (!tripId || !title || amountCents <= 0 || !payerId || splitIds.length === 0)
+    if (amountCents > MAX_AMOUNT * 100) throw new Error("That amount is too large. Use 10,000,000 or less.");
     throw new Error("Add what it was, an amount above zero, who paid, and who shares it.");
 
   const members = await db.tripMember.findMany({ where: { tripId } });
