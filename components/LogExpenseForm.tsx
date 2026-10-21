@@ -3,12 +3,12 @@ import { field, label, button } from "@/lib/ui";
 
 type Person = { id: string; name: string | null };
 
-export default function LogExpenseForm({ tripId, cur, members, activities }: {
-  tripId: string; cur: string; members: Person[]; activities: { id: string; title: string }[];
+export default function LogExpenseForm({ tripId, cur, members, activities, open = false }: {
+  tripId: string; cur: string; members: Person[]; activities: { id: string; title: string }[]; open?: boolean;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <details className="rounded-3xl bg-white p-5">
+    <details open={open} className="rounded-3xl bg-white p-5">
       <summary className="cursor-pointer font-display text-xl">Log an expense</summary>
       <form action={logExpense} className="mt-4 grid gap-3">
         <input type="hidden" name="tripId" value={tripId} />

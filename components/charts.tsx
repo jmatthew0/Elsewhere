@@ -44,3 +44,19 @@ export function LineChart({ points }: { points: { label: string; value: number }
     </div>
   );
 }
+
+export function HBars({ data, fmt }: { data: { label: string; value: number }[]; fmt: (n: number) => string }) {
+  const max = Math.max(...data.map((d) => d.value)) || 1;
+  return (
+    <ul className="space-y-4">
+      {data.map((d, i) => (
+        <li key={d.label}>
+          <div className="flex justify-between text-sm"><span>{d.label}</span><span className="font-medium">{fmt(d.value)}</span></div>
+          <div className="mt-1 h-2.5 rounded-full bg-sand">
+            <div className="h-2.5 rounded-full" style={{ width: `${(d.value / max) * 100}%`, background: COLORS[i % COLORS.length] }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
