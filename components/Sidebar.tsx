@@ -10,24 +10,27 @@ const links = [
   { href: "/places", label: "Saved places" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ name, onSignOut }: { name: string; onSignOut: () => Promise<void> }) {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col bg-navy text-sand p-6 sticky top-0 h-screen">
-      <Link href="/" className="font-display text-2xl tracking-tight">Elsewhere</Link>
-      <nav className="mt-10 flex flex-col gap-1 text-sm">
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-sand-400/50 bg-white p-5 md:flex">
+      <Link href="/" className="flex items-center gap-2">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy font-display text-lg text-sand">E</span>
+        <span className="font-display text-xl">Elsewhere</span>
+      </Link>
+      <nav className="mt-8 flex flex-col gap-1 text-sm">
         {links.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={`rounded-lg px-3 py-2 hover:bg-navy-800 ${active(l.href) ? "bg-navy-800 font-medium text-white" : ""}`}
-          >
+          <Link key={l.href} href={l.href} className={`rounded-xl px-3 py-2.5 transition hover:bg-sand-200 ${active(l.href) ? "bg-navy font-medium text-white hover:bg-navy" : "text-navy-600"}`}>
             {l.label}
           </Link>
         ))}
       </nav>
-      <div className="mt-auto text-xs text-sand-400">Signed in as Ann Stown</div>
+      <Link href="/trips/new" className="mt-6 rounded-full bg-sand px-4 py-2.5 text-center text-sm font-medium hover:bg-sand-400">Plan a trip</Link>
+      <div className="mt-auto border-t border-sand pt-4 text-sm">
+        <p className="font-medium">{name}</p>
+        <form action={onSignOut}><button className="text-xs text-navy-600 underline">Sign out</button></form>
+      </div>
     </aside>
   );
 }
