@@ -43,7 +43,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/trips" className="text-sm text-navy-600 underline">Back to my trips</Link>
+        <Link href="/" className="text-xs font-semibold tracking-wide text-navy-600 hover:text-navy">← BACK TO DASHBOARD</Link>
           <h1 className="mt-1 font-display text-4xl">{trip.title}</h1>
           <p className="text-navy-600">
             {fmt(trip.startDate)} – {fmt(trip.endDate)} · {trip.destination}{trip.country ? `, ${trip.country}` : ""} · {trip.members.length} traveler{trip.members.length === 1 ? "" : "s"}
@@ -134,9 +134,9 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div className={card}>
-            <h2 className="font-display text-xl">Route</h2>
+          className="rounded-3xl bg-navy p-5 text-sand"
             <TripMap pins={pins} route={stops.length > 1} className="mt-3 h-64 overflow-hidden rounded-2xl" />
-            <p className="mt-2 text-sm text-navy-600">{stops.length > 1 ? `${stops.length} stops in itinerary order` : "Link stops to places and your route appears here."}</p>
+            <p className="mt-2 text-sm text-sand-400">{stops.length > 1 ? `${stops.length} stops in itinerary order` : "Link stops to places and your route appears here."}</p>
           </div>
 
           <LogExpenseForm tripId={trip.id} cur={cur} members={trip.members.map((m) => m.user)} activities={trip.activities} />

@@ -1,10 +1,27 @@
 import { db } from "./prisma";
 
-// Until Auth.js is added, the signed-in user is the seeded Ann.
-export const getCurrentUser = () => db.user.findUnique({ where: { email: "ann@example.com" } });
+
+export async function getCurrentUser() {
+  return db.user.findFirst({ where: { email: process.env.SEED_EMAIL ?? "ann@example.com" } });
+}
+
+
+export async function requireUser() {
+  const u = await getCurrentUser();
+  if (!u) throw new Error("No user found. Run `npx prisma db seed` first.");
+  return u;
+}
 
 export const getTrips = () =>
-  db.trip.findMany({ orderBy: { startDate: "asc" }, include: { places: true, expenses: true } });
+  db.trip.findMany({
+    orderBy: { startDate: "asc" },
+    include: {
+      places: true,
+      expenses: true,
+      members: { include: { user: true } },
+      _count: { select: { activities: true } },
+    },
+  });
 
 export const getTrip = (id: string) =>
   db.trip.findUnique({
@@ -17,5 +34,5 @@ export const getTrip = (id: string) =>
     },
   });
 
-  export const getRecentExpenses = () =>
-    db.expense.findMany({ orderBy: { spentOn: "desc" }, take: 20, include: { trip: true, payer: true } });
+export const getRecentExpenses = () =>
+  db.expense.findMany({ orderBy: { spentOn: "desc" }, take: 20, include: { trip: true, payer: true } });

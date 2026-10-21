@@ -1,35 +1,58 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, Briefcase, Wallet, Compass, Bookmark } from "lucide-react";
+import { initials } from "@/lib/ui";
 
 const links = [
-  { href: "/", label: "Home" },
-  { href: "/trips", label: "My trips" },
-  { href: "/expenses", label: "Expenses" },
-  { href: "/explore", label: "Explore" },
-  { href: "/places", label: "Saved places" },
+  { href: "/", label: "Dashboard", Icon: LayoutDashboard },
+  { href: "/trips", label: "My Trips", Icon: Briefcase },
+  { href: "/expenses", label: "Expenses", Icon: Wallet },
+  { href: "/explore", label: "Explore", Icon: Compass },
+  { href: "/places", label: "Saved Places", Icon: Bookmark },
 ];
+type Recent = { id: string; title: string; when: string; coverUrl: string | null };
 
-export default function Sidebar({ name, onSignOut }: { name: string; onSignOut: () => Promise<void> }) {
+export default function Sidebar({ name, recent, onSignOut }: { name: string; recent: Recent[]; onSignOut?: () => Promise<void> }) {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-sand-400/50 bg-white p-5 md:flex">
-      <Link href="/" className="flex items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy font-display text-lg text-sand">E</span>
-        <span className="font-display text-xl">Elsewhere</span>
+    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-sand-400/40 bg-white md:flex">
+      <Link href="/" className="flex items-center gap-2 px-5 py-5">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-navy font-display text-white">E</span>
+        <span className="font-display text-lg font-semibold">Elsewhere</span>
       </Link>
-      <nav className="mt-8 flex flex-col gap-1 text-sm">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} className={`rounded-xl px-3 py-2.5 transition hover:bg-sand-200 ${active(l.href) ? "bg-navy font-medium text-white hover:bg-navy" : "text-navy-600"}`}>
-            {l.label}
+      <nav className="flex flex-col gap-0.5 text-sm">
+        {links.map(({ href, label, Icon }) => (
+          <Link key={href} href={href} className={`flex items-center gap-3 px-5 py-2.5 ${active(href) ? "bg-sand-200 font-medium text-navy shadow-[inset_-3px_0_0_#13233F]" : "text-navy-600 hover:bg-sand-200/60"}`}>
+            <Icon className="h-4 w-4" aria-hidden /> {label}
           </Link>
         ))}
       </nav>
-      <Link href="/trips/new" className="mt-6 rounded-full bg-sand px-4 py-2.5 text-center text-sm font-medium hover:bg-sand-400">Plan a trip</Link>
-      <div className="mt-auto border-t border-sand pt-4 text-sm">
-        <p className="font-medium">{name}</p>
-        <form action={onSignOut}><button className="text-xs text-navy-600 underline">Sign out</button></form>
+
+      {recent.length > 0 && (
+        <div className="mt-auto border-t border-sand-400/40 px-5 py-4">
+          <p className="mb-2 text-[10px] font-semibold tracking-wider text-navy-600">RECENT TRIPS</p>
+          <ul className="space-y-2">
+            {recent.map((t) => (
+              <li key={t.id}>
+                <Link href={`/trips/${t.id}`} className="flex items-center gap-2">
+                  <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md bg-navy">{t.coverUrl && <Image src={t.coverUrl} alt="" fill sizes="32px" className="object-cover" />}</span>
+                  <span className="min-w-0 text-xs"><span className="block truncate font-medium">{t.title}</span><span className="text-navy-600">{t.when}</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className={`flex items-center gap-2 border-t border-sand-400/40 px-5 py-4 ${recent.length ? "" : "mt-auto"}`}>
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-sand text-xs font-semibold">{initials(name)}</span>
+        <div className="min-w-0 text-xs">
+          <p className="truncate font-medium">{name}</p>
+          {onSignOut && <form action={onSignOut}><button className="text-navy-600 underline">Sign out</button></form>}
+        </div>
       </div>
     </aside>
   );
