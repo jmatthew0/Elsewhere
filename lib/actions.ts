@@ -22,6 +22,7 @@ export async function createTrip(formData: FormData) {
   const trip = await db.trip.create({
     data: {
       title, destination, startDate, endDate,
+      country: str(formData, "country") || null,
       currency: str(formData, "currency") || "PHP",
       budgetCents: cents(formData, "budget"),
       members: { create: { userId: user.id, role: "ORGANIZER" } },

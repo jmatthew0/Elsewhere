@@ -1,5 +1,5 @@
 import { createTrip } from "@/lib/actions";
-import { field, label, button, CURRENCIES } from "@/lib/ui";
+import { field, label, button, CURRENCIES, COUNTRIES } from "@/lib/ui";
 
 export default function NewTripPage() {
   return (
@@ -14,6 +14,10 @@ export default function NewTripPage() {
         </label>
         <label className={label}>Destination
           <input name="destination" required placeholder="Rome and Tuscany" className={field} />
+        </label>
+        <label className={label}>Country
+          <input name="country" list="countries" placeholder="Italy" className={field} />
+          <datalist id="countries">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>
         </label>
         <div className="grid grid-cols-2 gap-4">
           <label className={label}>Start date

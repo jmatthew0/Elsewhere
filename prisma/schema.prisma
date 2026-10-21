@@ -22,6 +22,7 @@ model Trip {
   id           String        @id @default(cuid())
   title        String
   destination  String
+  country      String?
   startDate    DateTime
   endDate      DateTime
   budgetCents  Int           @default(0)
