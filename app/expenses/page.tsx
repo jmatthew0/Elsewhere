@@ -8,6 +8,8 @@ import { getCurrentUser, getTrip, getTrips } from "@/lib/queries";
 import { getRateToPhp, money } from "@/lib/currency";
 import { balances } from "@/lib/balances";
 import { initials } from "@/lib/ui";
+import ConfirmDelete from "@/components/ConfirmDelete";
+import { deleteExpense } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -139,7 +141,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead><tr className={label}><th className="py-2 font-semibold">TRANSACTION</th><th className="font-semibold">CATEGORY</th><th className="font-semibold">DATE</th><th className="font-semibold">PAID BY</th><th className="text-right font-semibold">AMOUNT</th></tr></thead>
+              <thead><tr className={label}><th className="py-2 font-semibold">TRANSACTION</th><th className="font-semibold">CATEGORY</th><th className="font-semibold">DATE</th><th className="font-semibold">PAID BY</th><th className="text-right font-semibold">AMOUNT</th><th></th></tr></thead>
               <tbody>
                 {rows.map((e) => {
                   const Icon = ICONS[e.category] ?? Receipt;
@@ -150,6 +152,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       <td className="text-navy-600">{dmy(e.spentOn)}</td>
                       <td><span className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-sand text-[9px] font-semibold">{initials(names[e.payerId])}</span>{names[e.payerId]}</span></td>
                       <td className="text-right font-medium"><Money cents={e.amountCents} cur={cur} rate={rate} /></td>
+                      <td className="pl-3 text-right"><ConfirmDelete action={deleteExpense} fields={{ id: e.id }} what="this expense" className="text-xs text-navy-600 underline" /></td>
                     </tr>
                   );
                 })}

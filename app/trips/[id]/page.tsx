@@ -10,6 +10,8 @@ import LogExpenseForm from "@/components/LogExpenseForm";
 import { getTrip } from "@/lib/queries";
 import { getRateToPhp, money } from "@/lib/currency";
 import { balances } from "@/lib/balances";
+import ConfirmDelete from "@/components/ConfirmDelete";
+import { deleteActivity } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
         <div className="flex gap-3">
           <div className="rounded-2xl bg-navy px-5 py-3 text-sand"><p className="text-xs text-sand-400">Budget</p><p className="text-xl font-medium"><Money cents={trip.budgetCents} cur={cur} rate={rate} /></p></div>
           <div className="rounded-2xl bg-white px-5 py-3 shadow-sm"><p className="text-xs text-navy-600">Spent</p><p className="text-xl font-medium"><Money cents={actual} cur={cur} rate={rate} /></p></div>
+          <Link href={`/trips/${trip.id}/edit`} className="grid items-center rounded-2xl bg-navy px-5 text-sm font-medium text-white hover:bg-navy-800">Edit Trip</Link>
         </div>
       </header>
 
@@ -83,6 +86,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
                             <div className="text-right text-sm">
                               {paid > 0 ? <Money cents={paid} cur={cur} rate={rate} /> : <span className="text-navy-600">Not paid yet</span>}
                               <p className="text-xs text-navy-600">est. {money(a.estimatedCents, cur)}</p>
+                              <ConfirmDelete action={deleteActivity} fields={{ id: a.id }} what="this stop" className="mt-1 text-xs text-navy-600 underline" />
                             </div>
                           </li>
                         );

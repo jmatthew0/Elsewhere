@@ -151,3 +151,59 @@ export async function savePlace(formData: FormData) {
     await db.place.delete({ where: { id } });
     revalidatePath("/", "layout");
   }
+
+  export async function updateTrip(_prev: TripState, formData: FormData): Promise<TripState> {
+    const values: Record<string, string> = {};
+    formData.forEach((v, k) => { values[k] = String(v); });
+    const fail = (error: string) => ({ error, values });
+  
+    const id = str(formData, "id");
+    const title = str(formData, "title");
+    const destination = str(formData, "destination");
+    const country = str(formData, "country");
+    const startDate = new Date(str(formData, "startDate"));
+    const endDate = new Date(str(formData, "endDate"));
+    if (!id) return fail("Couldn't tell which trip to edit.");
+    if (!title) return fail("Give your trip a name.");
+    if (!destination) return fail("Add a destination.");
+    if (isNaN(+startDate) || isNaN(+endDate)) return fail("Choose a start and end date.");
+    if (endDate < startDate) return fail("The end date needs to be on or after the start date.");
+    if (over(formData, "budget")) return fail("That budget is too large. Use 10,000,000 or less.");
+  
+    try {
+      await db.trip.update({
+        where: { id },
+        data: { title, destination, startDate, endDate, country: country || null, budgetCents: Math.max(0, cents(formData, "budget")) },
+      });
+      const cover = str(formData, "cover");
+      if (cover && cover !== "keep") await db.trip.update({ where: { id }, data: { coverUrl: await coverFor(cover, destination, country) } });
+    } catch (e) {
+      console.error(e);
+      return fail("Couldn't save your changes. Try again.");
+    }
+  
+    revalidatePath("/", "layout");
+    redirect(`/trips/${id}`);
+  }
+  
+  export async function deleteTrip(formData: FormData) {
+    const id = str(formData, "id");
+    if (!id) return;
+    await db.trip.delete({ where: { id } });
+    revalidatePath("/", "layout");
+    redirect("/trips");
+  }
+  
+  export async function deleteActivity(formData: FormData) {
+    const id = str(formData, "id");
+    if (!id) return;
+    await db.activity.delete({ where: { id } });
+    revalidatePath("/", "layout");
+  }
+  
+  export async function deleteExpense(formData: FormData) {
+    const id = str(formData, "id");
+    if (!id) return;
+    await db.expense.delete({ where: { id } });
+    revalidatePath("/", "layout");
+  }
