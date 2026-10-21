@@ -76,3 +76,29 @@ export async function logExpense(formData: FormData) {
   revalidatePath("/expenses");
   revalidatePath("/trips");
 }
+
+export async function savePlace(formData: FormData) {
+    const tripId = str(formData, "tripId");
+    const name = str(formData, "name");
+    const lat = parseFloat(str(formData, "lat"));
+    const lng = parseFloat(str(formData, "lng"));
+    if (!tripId || !name || !Number.isFinite(lat) || !Number.isFinite(lng))
+      throw new Error("Search for a place and pick a result first.");
+  
+    // Mapbox has no photos, so each place gets a map snapshot with a pin.
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    const imageUrl = token
+      ? `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-l+13233f(${lng},${lat})/${lng},${lat},14,0/600x400@2x?access_token=${token}`
+      : null;
+  
+    await db.place.create({ data: { tripId, name, category: str(formData, "category") || "Other", lat, lng, imageUrl } });
+    revalidatePath("/", "layout");
+  }
+  
+  export async function removePlace(formData: FormData) {
+    const id = str(formData, "id");
+    if (!id) return;
+    await db.activity.updateMany({ where: { placeId: id }, data: { placeId: null } });
+    await db.place.delete({ where: { id } });
+    revalidatePath("/", "layout");
+  }

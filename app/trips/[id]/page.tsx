@@ -8,6 +8,7 @@ import LogExpenseForm from "@/components/LogExpenseForm";
 import { getTrip } from "@/lib/queries";
 import { getRateToPhp } from "@/lib/currency";
 import { balances } from "@/lib/balances";
+import PlaceSearch from "@/components/PlaceSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
           ))}
           <TripMap pins={trip.places} className="h-80 overflow-hidden rounded-3xl" />
           <AddStopForm tripId={trip.id} days={tripDays} places={trip.places} />
+          <PlaceSearch tripId={trip.id} />
         </section>
 
         <aside id="expenses" className="space-y-6">
