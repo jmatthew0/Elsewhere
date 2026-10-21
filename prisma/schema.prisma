@@ -12,6 +12,7 @@ model User {
   name    String?
   email   String       @unique
   image   String?
+  homeCurrency String @default("PHP")
   trips   TripMember[]
   paid    Expense[]    @relation("Payer")
   splits  ExpenseSplit[]
@@ -24,7 +25,7 @@ model Trip {
   startDate    DateTime
   endDate      DateTime
   budgetCents  Int           @default(0)
-  currency     String        @default("EUR")
+  currency     String        @default("PHP")
   coverUrl     String?
   members      TripMember[]
   activities   Activity[]
