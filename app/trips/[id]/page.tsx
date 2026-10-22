@@ -14,6 +14,7 @@ import ConfirmDelete from "@/components/ConfirmDelete";
 import { deleteActivity } from "@/lib/actions";
 import Reservations from "@/components/Reservations";
 import ReservationForm from "@/components/ReservationForm";
+import InviteMembers from "@/components/InviteMembers";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
                 );
               })}
             </ul>
+            <InviteMembers tripId={trip.id} invites={trip.invites} />
           </div>
 
           <div className="rounded-3xl bg-navy p-5 text-sand">
