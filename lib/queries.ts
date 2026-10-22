@@ -70,3 +70,12 @@ export async function getRecentExpenses() {
     include: { trip: true, payer: true },
   });
 }
+
+export async function getReservations() {
+  const u = await requireUser();
+  return db.reservation.findMany({
+    where: { trip: mine(u.id) },
+    orderBy: [{ date: "asc" }],
+    include: { trip: true },
+  });
+}

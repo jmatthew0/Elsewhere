@@ -287,3 +287,66 @@ export async function deleteReservation(formData: FormData) {
   await db.reservation.delete({ where: { id: r.id } });
   refresh();
 }
+
+export async function updateReservation(formData: FormData) {
+  const id = str(formData, "id");
+  const r = await db.reservation.findUnique({ where: { id } });
+  if (!r) throw new Error("Reservation not found.");
+  await memberOf(r.tripId);
+
+  const title = str(formData, "title");
+  if (!title) throw new Error("Add a title for the reservation.");
+  if (over(formData, "cost")) throw new Error("That cost is too large. Use 10,000,000 or less.");
+
+  const date = str(formData, "date");
+  await db.reservation.update({
+    where: { id },
+    data: {
+      title,
+      kind: str(formData, "kind") || "Other",
+      status: str(formData, "status") || "BOOKED",
+      reference: str(formData, "reference") || null,
+      details: str(formData, "details") || null,
+      date: date ? new Date(date) : null,
+      costCents: Math.max(0, cents(formData, "cost")),
+    },
+  });
+  refresh();
+  redirect(`/trips/${r.tripId}`);
+}
+
+export async function updateExpense(formData: FormData) {
+  const id = str(formData, "id");
+  const e = await db.expense.findUnique({ where: { id } });
+  if (!e) throw new Error("Expense not found.");
+  await memberOf(e.tripId);
+
+  const title = str(formData, "title");
+  const amountCents = cents(formData, "amount");
+  const payerId = str(formData, "payerId");
+  const splitIds = formData.getAll("splitWith").map(String);
+  if (!title || amountCents <= 0 || !payerId || splitIds.length === 0)
+    throw new Error("Add what it was, an amount above zero, who paid, and who shares it.");
+  if (over(formData, "amount")) throw new Error("That amount is too large. Use 10,000,000 or less.");
+
+  const members = await db.tripMember.findMany({ where: { tripId: e.tripId } });
+  const ok = new Set(members.map((m) => m.userId));
+  if (!ok.has(payerId) || splitIds.some((x) => !ok.has(x)))
+    throw new Error("Everyone on an expense needs to be a traveler on this trip.");
+
+  await db.$transaction([
+    db.expenseSplit.deleteMany({ where: { expenseId: id } }),
+    db.expense.update({
+      where: { id },
+      data: {
+        title, amountCents, payerId,
+        category: str(formData, "category") || "Other",
+        activityId: str(formData, "activityId") || null,
+        spentOn: new Date(str(formData, "spentOn") || Date.now()),
+        splits: { create: equalSplit(amountCents, splitIds) },
+      },
+    }),
+  ]);
+  refresh();
+  redirect(`/expenses?trip=${e.tripId}`);
+}

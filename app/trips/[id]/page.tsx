@@ -12,7 +12,7 @@ import { getRateToPhp, money } from "@/lib/currency";
 import { balances } from "@/lib/balances";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import { deleteActivity } from "@/lib/actions";
-import Reservations from "@/components/Reservations";
+import Reservations, { DayReservation } from "@/components/Reservations";
 import ReservationForm from "@/components/ReservationForm";
 import InviteMembers from "@/components/InviteMembers";
 
@@ -33,7 +33,16 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const actual = trip.expenses.reduce((s, e) => s + e.amountCents, 0);
   const net = balances(trip.expenses);
   const tripDays = Math.round((trip.endDate.getTime() - trip.startDate.getTime()) / 864e5) + 1;
-  const dayNumbers = [...new Set(trip.activities.map((a) => a.day))];
+
+  // Reservations with a date inside the trip show up in that day.
+  const resByDay = new Map<number, typeof trip.reservations>();
+  for (const r of trip.reservations) {
+    if (!r.date) continue;
+    const n = Math.floor((r.date.getTime() - trip.startDate.getTime()) / 864e5) + 1;
+    if (n < 1 || n > tripDays) continue;
+    resByDay.set(n, [...(resByDay.get(n) ?? []), r]);
+  }
+  const dayNumbers = [...new Set([...trip.activities.map((a) => a.day), ...Array.from(resByDay.keys())])].sort((a, b) => a - b);
   const dayLabel = (n: number) =>
     new Date(trip.startDate.getTime() + (n - 1) * 864e5).toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 
@@ -69,14 +78,17 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             <ol className="relative space-y-10 border-l-2 border-sand-400 pl-8">
               {dayNumbers.map((n) => {
                 const items = trip.activities.filter((a) => a.day === n);
+                const dayRes = resByDay.get(n) ?? [];
+                const count = items.length + dayRes.length;
                 return (
                   <li key={n} className="relative">
                     <span className="absolute -left-[51px] top-0 grid h-9 w-9 place-items-center rounded-full bg-navy text-sm font-medium text-white ring-4 ring-sand-200">{n}</span>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h2 className="font-display text-2xl">{dayLabel(n)}</h2>
-                      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium">{items.length} {items.length === 1 ? "activity" : "activities"}</span>
+                      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium">{count} {count === 1 ? "item" : "items"}</span>
                     </div>
                     <ul className="mt-3 space-y-3">
+                      {dayRes.map((r) => <DayReservation key={r.id} r={r} />)}
                       {items.map((a) => {
                         const paid = a.expenses.reduce((s, e) => s + e.amountCents, 0);
                         return (

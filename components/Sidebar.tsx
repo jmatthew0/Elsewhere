@@ -2,13 +2,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, Wallet, Compass, Bookmark } from "lucide-react";
+import { LayoutDashboard, Briefcase, Wallet, CalendarCheck, Compass, Bookmark } from "lucide-react";
 import { initials } from "@/lib/ui";
+
 
 const links = [
   { href: "/", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/trips", label: "My Trips", Icon: Briefcase },
   { href: "/expenses", label: "Expenses", Icon: Wallet },
+  { href: "/reservations", label: "Reservations", Icon: CalendarCheck },
   { href: "/explore", label: "Explore", Icon: Compass },
   { href: "/places", label: "Saved Places", Icon: Bookmark },
 ];

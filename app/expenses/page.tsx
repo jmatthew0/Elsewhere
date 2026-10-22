@@ -152,7 +152,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       <td className="text-navy-600">{dmy(e.spentOn)}</td>
                       <td><span className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-sand text-[9px] font-semibold">{initials(names[e.payerId])}</span>{names[e.payerId]}</span></td>
                       <td className="text-right font-medium"><Money cents={e.amountCents} cur={cur} rate={rate} /></td>
-                      <td className="pl-3 text-right"><ConfirmDelete action={deleteExpense} fields={{ id: e.id }} what="this expense" className="text-xs text-navy-600 underline" /></td>
+                      <td className="pl-3"><span className="flex items-center justify-end gap-3 whitespace-nowrap text-xs"><Link href={`/expenses/${e.id}/edit`} className="text-navy-600 underline">Edit</Link><ConfirmDelete action={deleteExpense} fields={{ id: e.id }} what="this expense" className="text-xs text-navy-600 underline" /></span></td>
                     </tr>
                   );
                 })}

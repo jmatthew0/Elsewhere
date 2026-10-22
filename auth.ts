@@ -1,11 +1,12 @@
 import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  providers: [GitHub],
+  // Google verifies emails, so it's safe to link to the account you made with GitHub.
+  providers: [Google({ allowDangerousEmailAccountLinking: true })],
   pages: { signIn: "/signin" },
   callbacks: {
     session({ session, user }) {
